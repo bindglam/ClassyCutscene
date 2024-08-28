@@ -1,0 +1,4 @@
+name: ClassyCutscene
+main: io.github.bindglam.classycutscene.ClassyCutscenePlugin
+version: 1.0
+api-version: 1.20

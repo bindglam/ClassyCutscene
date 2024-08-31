@@ -1,56 +1,52 @@
 package io.github.bindglam.classycutscene.cutscene.node.keyframe;
 
 import io.github.bindglam.classycutscene.api.cutscene.node.INode;
+import io.github.bindglam.classycutscene.api.cutscene.node.keyframe.AbstractKeyframe;
 import io.github.bindglam.classycutscene.api.cutscene.node.keyframe.IKeyframe;
+import io.github.bindglam.classycutscene.utils.ExtraMath;
 import io.github.bindglam.classycutscene.utils.ReflectionUtil;
 import org.bukkit.Location;
+import org.joml.Quaternionf;
 
 import java.lang.reflect.Field;
 import java.util.Map;
 
-public final class LinearKeyframe implements IKeyframe {
-    private final Map<String, Object> targetFields;
-    private final long position;
-
+public final class LinearKeyframe extends AbstractKeyframe {
     public LinearKeyframe(long position, Map<String, Object> targetFields) {
-        this.targetFields = targetFields;
-        this.position = position;
+        super(position, targetFields);
     }
 
     @Override
-    public Map<String, Object> getTargetFields() {
-        return targetFields;
-    }
-
-    @Override
-    public void update(INode node, long ticks, long length) {
+    public void update(INode node, IKeyframe prevKeyframe, long ticks, long length) {
         float rate = ticks / (float) length;
 
-        for(String fieldName : targetFields.keySet()){
+        for(String fieldName : getTargetFields().keySet()){
             Field field;
-            Object value;
             try {
-                field = node.getClass().getDeclaredField(fieldName);
-                value = field.get(node);
-            } catch (NoSuchFieldException | IllegalAccessException e) {
+                field = ReflectionUtil.getField(node.getClass(), fieldName);
+                field.setAccessible(true);
+            } catch (NoSuchFieldException e) {
                 throw new RuntimeException("Failed to edit node data", e);
             }
 
             if(field.getType() == Location.class){
-                Location location = (Location) value;
-                Location targetLoc = (Location) targetFields.get(fieldName);
-                double editX = (targetLoc.getX()-location.getX())*rate;
-                double editY = (targetLoc.getY()-location.getY())*rate;
-                double editZ = (targetLoc.getZ()-location.getZ())*rate;
+                Location targetLoc = (Location) getTargetFields().get(fieldName);
+                if(prevKeyframe == null){
+                    ReflectionUtil.setField(node, field, targetLoc);
+                    return;
+                }
+                Location location = (Location) prevKeyframe.getTargetFields().get(fieldName);
+
+                Quaternionf rotQ = ExtraMath.fromYawPitch(location.getYaw(), location.getPitch(), 0f);
+                Quaternionf targetRotQ = ExtraMath.fromYawPitch(targetLoc.getYaw(), targetLoc.getPitch(), 0f);
+                rotQ.nlerp(targetRotQ, rate);
+                float[] angles = ExtraMath.toEulerAngles(rotQ);
 
                 ReflectionUtil.setField(node, field, new Location(location.getWorld(),
-                        location.getX()+editX, location.getY()+editY, location.getZ()+editZ));
+                        ExtraMath.lerp((float) location.getX(), (float) targetLoc.getX(), rate),
+                        ExtraMath.lerp((float) location.getY(), (float) targetLoc.getY(), rate),
+                        ExtraMath.lerp((float) location.getZ(), (float) targetLoc.getZ(), rate), angles[0], angles[1]));
             }
         }
-    }
-
-    @Override
-    public long getPosition() {
-        return position;
     }
 }

@@ -8,13 +8,18 @@ public final class ReflectionUtil {
         field.setAccessible(true);
 
         try {
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            modifiersField.setAccessible(true);
-            modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-
             field.set(obj, value);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
+        } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to set field value", e);
+        }
+    }
+
+    public static Field getField(Class<?> clazz, String name) throws NoSuchFieldException {
+        try {
+            return clazz.getDeclaredField(name);
+        } catch (NoSuchFieldException e) {
+            if(clazz.getSuperclass() == Object.class) throw e;
+            return getField(clazz.getSuperclass(), name);
         }
     }
 }

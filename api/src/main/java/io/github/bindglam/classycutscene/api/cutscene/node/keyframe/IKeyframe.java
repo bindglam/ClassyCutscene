@@ -7,7 +7,7 @@ import java.util.Map;
 public interface IKeyframe {
     Map<String, Object> getTargetFields();
 
-    void update(INode node, long ticks, long length);
+    void update(INode node, IKeyframe prevKeyframe, long ticks, long length);
 
     long getPosition();
 }

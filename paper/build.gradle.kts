@@ -4,6 +4,7 @@ plugins {
 }
 
 repositories {
+    maven("https://repo.codemc.org/repository/maven-public/")
 }
 
 dependencies {
@@ -13,6 +14,8 @@ dependencies {
     paperweight.paperDevBundle("1.20.4-R0.1-SNAPSHOT")
 
     api(project(":api"))
+
+    implementation("dev.jorel:commandapi-bukkit-shade:9.5.3")
 }
 
 java {
@@ -23,8 +26,11 @@ tasks.shadowJar {
     archiveFileName = "ClassyCutscene-${version}.jar"
 
     dependencies {
-        dependency(":api")
+        include(dependency(":api"))
+        include(dependency("dev.jorel:commandapi-bukkit-shade:9.5.3"))
     }
+
+    relocate("dev.jorel.commandapi", "io.github.bindglam.classycutscene.commandapi")
 }
 
 tasks.test {
